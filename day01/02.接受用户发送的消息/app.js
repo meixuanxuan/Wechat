@@ -5,6 +5,7 @@ const express = require('express');
 const sha1 = require('sha1');
 
 const {getUserDataAsync,parseXMLDataAsync,formatMessage} =require('./utils/tools')
+const template = require('./replay/template');
 const app = express();
 
 const config = {
@@ -42,7 +43,7 @@ app.use(async (req, res, next) => {
     }
     //用户发送的消息在请求体中
     const xmlData = await getUserDataAsync(req)
-    console.log(xmlData);
+    // console.log(xmlData);
 
   /*
    <xml><ToUserName><![CDATA[gh_e4ede8d9d7ee]]></ToUserName> //微信号
@@ -55,7 +56,7 @@ app.use(async (req, res, next) => {
   */
   //将用户发送过来的xml数据解析为js对象
     const jsData = await parseXMLDataAsync (xmlData)
-    console.log(jsData);
+    // console.log(jsData);
   /*
    { xml: 
    { ToUserName: [ 'gh_e4ede8d9d7ee' ],
@@ -67,7 +68,7 @@ app.use(async (req, res, next) => {
    */
   //数据格式化
     const message = formatMessage(jsData)
-    console.log(message);
+    // console.log(message);
   /*
    { ToUserName: 'gh_e4ede8d9d7ee',
    FromUserName: 'oLX675sL0d34Bw1HwdKB6sp_KomI',
@@ -77,6 +78,14 @@ app.use(async (req, res, next) => {
    MsgId: '6624422901965513172' }
 
    */
+  //初始化消息配置对象
+    let options = {
+      toUserName: message.FromUserName,
+      fromUserName: message.ToUserName,
+      createTime: Date.now(),
+      msgType: 'text'
+    }
+
   //初始化一个消息文本
     let content = '你在说什么';
     //判端用户发送消息的内容，根据内容返回待定的响应
@@ -86,17 +95,17 @@ app.use(async (req, res, next) => {
       content = '发送333'
     }else if (message.Content ==='333'){
       content = '哈哈哈'
+    }else if (message.Content ==='4444'){
+      options.msgType = 'news';
+      options.title ='测试微信公众号';
+      options.description = 'class0810';
+      options.picUrl = 'https://ss1.baidu.com/6ONXsjip0QIZ8tyhnq/it/u=199783060,2774173244&fm=58&s=188FA15AB1206D1108400056000040F6&bpow=121&bpoh=75'
+      options.url = 'http://atguigu.com'
     }
 
-    //返回xml消息的微信服务器
-    //微信官网提供的xml数据有问题，
-    let replyMessage = `<xml>
-      <ToUserName><![CDATA[${message.FromUserName}]]></ToUserName>
-      <FromUserName><![CDATA[${message.ToUserName}]]></FromUserName>
-      <CreateTime>${Date.now()}</CreateTime>
-      <MsgType><![CDATA[text]]></MsgType>
-      <Content><![CDATA[${content}]]></Content>
-      </xml>`;
+    options.content = content;
+
+    const replyMessage = template(options)
     console.log(replyMessage);
     /*
      注意：微信服务器当没有接收到开发者服务器响应时，默认会请求
